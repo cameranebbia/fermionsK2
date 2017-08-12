@@ -1,0 +1,40 @@
+<settings>
+<group>
+		<skip_points>2</skip_points>
+		<farThreshold>200</farThreshold>
+    <show_kinect>1</show_kinect>
+		<mirror_X>1</mirror_X>
+		<mirror_Y>0</mirror_Y>
+		<audioBackgroundVol>1</audioBackgroundVol>
+		<audioFermionsVol>1</audioFermionsVol>
+		<extrusion>2.4</extrusion>
+		<color_extrusion>0.1</color_extrusion>
+		<fade_in_color>255</fade_in_color>
+		<fade_in_amount>10</fade_in_amount>
+		<fade_out_color>0</fade_out_color>
+		<fade_out_amount>10</fade_out_amount>
+		<point_Size>3</point_Size>
+		<alpha_channel>255</alpha_channel>
+		<red>1</red>
+		<green>1</green>
+		<blue>1</blue>
+		<camera_position_X>0</camera_position_X>
+		<camera_position_Y>0</camera_position_Y>
+		<camera_position_Z>400</camera_position_Z>
+  	<erode>0</erode>
+		<dilate>0</dilate>
+    <cropLeft>0</cropLeft>
+    <cropRight>0</cropRight>
+    <showCrop>0</showCrop>
+    <volFade>0.05</volFade>
+    <kinectDiffSkip>3</kinectDiffSkip>
+    <kinectDiffCount>1</kinectDiffCount>
+    <kinectMovementSpeed>30</kinectMovementSpeed>
+    <thresholdAudioOn>2000</thresholdAudioOn>
+    <currPresAmount>0</currPresAmount>
+    <thresholdMoveAudioMin>30</thresholdMoveAudioMin>
+    <thresholdMoveAudioMax>11</thresholdMoveAudioMax>
+    <preVolumeMap>0</preVolumeMap>
+    <volumeFermions>0</volumeFermions>
+	</group>
+</settings>

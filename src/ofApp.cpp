@@ -9,7 +9,8 @@ void ofApp::setup() {
 	grayPix.allocate(512, 424, OF_IMAGE_GRAYSCALE);
 
 	ofSetLogLevel(OF_LOG_VERBOSE);
-
+	
+	screenshotCount = 0;
 
 	showmouse = false;
 	ofHideCursor();
@@ -22,11 +23,11 @@ void ofApp::setup() {
 	ofxGuiSetDefaultHeight(20);
 
 	gui.setup("CONTROLS");
-	gui.setPosition(20, ofGetWindowHeight() / 2 - 50);
+	gui.setPosition(1520, 20);
 	farThreshold.set("farThreshold", 2000, 0, 7000);
 	erode.set("erode", 0, 0, 30);
 	dilate.set("dilate", 0, 0, 30);
-	showgrab.set("show input ", false);
+	showgrab.set("show kinect", false);
 	colR.set("red", 1, 0, 1);
 	colG.set("green", 1, 0, 1);
 	colB.set("blue", 1, 0, 1);
@@ -51,18 +52,39 @@ void ofApp::setup() {
 	audioFermionsVol.set("audioFermionsVol", 1, 0, 4);
 
 
+	cropLeft.set("cropLeft", 0, -20, 960);
+	cropRight.set("cropRight", 0, -20, 960);
+	showCrop.set("showCrop", false);
 
-	gui.add(skip);
-	// gui.add(usekinectDepthRaw);
+	volFadeIn.set("volFadeIn", 0.05, 0, 0.6);
+	volFadeOut.set("volFadeOut", 0.05, 0, 0.6);
+	kinectDiffSkip.set("kinectDiffSkip", 0, 0, 10);
+
+	thresholdAudioOn.set("thresholdAudioOn", 0, 0, 15000);
+	currPresAmount.set("currPresAmount", 0, 0, 15000);
+	thresholdMoveAudioMin.set("thresholdMoveAudioMin", 0, 0, 100);
+	thresholdMoveAudioMax.set("thresholdMoveAudioMax", 0, 0, 100);
+	kinectMovementSpeed.set("kinectMovementSpeed", 0, 0, 100);
+
+	preVolumeMap.set("preVolumeMap", 0, 0, 1);
+	volumeFermions.set("volumeFermions", 0, 0, 1);
+
 	gui.add(farThreshold);
-	//    gui.add(useCamera);
 	gui.add(showgrab);
 	gui.add(mirrorX);
 	gui.add(mirrorY);
+
+	gui.add(cropLeft);
+	gui.add(cropRight);
+	gui.add(showCrop);
+	
 	gui.add(erode);
 	gui.add(dilate);
+
 	gui.add(audioBackgroundVol);
 	gui.add(audioFermionsVol);
+
+	gui.add(skip);
 	gui.add(extrusion);
 	//gui.add(colorExtrusion);
 	gui.add(incolor);
@@ -77,6 +99,23 @@ void ofApp::setup() {
 	gui.add(camPosX);
 	gui.add(camPosY);
 	gui.add(camPosZ);
+
+	gui.add(volFadeIn);
+	gui.add(volFadeOut);
+
+	gui.add(thresholdAudioOn);
+	gui.add(currPresAmount);
+
+	gui.add(kinectDiffSkip);
+
+
+	gui.add(thresholdMoveAudioMin);
+	gui.add(thresholdMoveAudioMax);
+	gui.add(kinectMovementSpeed);
+
+	gui.add(preVolumeMap);
+	gui.add(volumeFermions);
+
 
 	fbo.allocate(kinectWidth, kinectHeight, GL_RGBA);//GL_RGBA32F
 
@@ -124,7 +163,16 @@ void ofApp::setup() {
 	grayImageKinectOld.allocate(kinectWidth, kinectHeight);
 	grayImageKinectDiff.allocate(kinectWidth, kinectHeight);
 
+	showCrop = false;
 
+	kinectDiffCount = 0;
+	kinectMovementSpeed = 0;
+
+	currPresAmount = 0;
+
+	preVolumeMap = 0;
+	preVolumeSmooth = 0;
+	volumeFermions = 0;
 }
 
 //--------------------------------------------------------------
@@ -165,8 +213,6 @@ void ofApp::update() {
 		// update the cv images
 		grayImage.flagImageChanged();
 
-		// find contours which are between the size of 20 pixels and 1/3 the w*h pixels.
-		// also, find holes is set to true so we will get interior contours as well....
 
 		fbo.begin();
 
@@ -189,37 +235,45 @@ void ofApp::update() {
 
 
 		/////////////// SOUNDS \\\\\\\\\\\\\\\\\\
-		                
+		
+		
+		currPresAmount = grayImage.countNonZeroInRegion(0, 0, grayImage.width, grayImage.height);
 
-		if (grayImage.countNonZeroInRegion(0, 0, grayImage.width, grayImage.height) < 100) {
-
+		if (currPresAmount < thresholdAudioOn) {
 			// cout << "none" << endl;
-			kinectMovementSpeed = 10000;
+			kinectMovementSpeed = thresholdMoveAudioMin;
+			grayImageKinectOld = grayImage;
+			grayImageKinectDiff.set(0);
 		}
 		else {
-			grayImageKinectDiff = grayImage;
-			grayImageKinectDiff.absDiff(grayImageKinectOld);
-			grayImageKinectOld = grayImage;
-
-			kinectMovementSpeed = grayImageKinectDiff.countNonZeroInRegion(0, 0, grayImageKinectDiff.width, grayImageKinectDiff.height);
-			//kinectMovementSpeed = ofMap(kinectMovementSpeed, 0, 50000, 0, 1);
+			if (kinectDiffCount >= kinectDiffSkip) {
+				kinectDiffCount = 0;
+				grayImageKinectDiff = grayImage;
+				grayImageKinectDiff.absDiff(grayImageKinectOld);
+				int loccurrPresAmount = currPresAmount;
+				kinectMovementSpeed = grayImageKinectDiff.countNonZeroInRegion(0, 0, grayImageKinectDiff.width, grayImageKinectDiff.height) / sqrt(loccurrPresAmount);
+				//kinectMovementSpeed = ofMap(kinectMovementSpeed, 0, 50000, 0, 1);
+				grayImageKinectOld = grayImage;
+			}
+			kinectDiffCount++;
 		}
 
-		if (kinectMovementSpeed > 0) {
-			preVolume += (kinectMovementSpeed - preVolume) * volFade;
+
+		preVolumeMap = ofMap(kinectMovementSpeed, thresholdMoveAudioMax, thresholdMoveAudioMin, 1, 0, true);
+
+		if (preVolumeMap > preVolumeSmooth) {
+			preVolumeSmooth += (preVolumeMap - preVolumeSmooth) * volFadeIn;
+		} else {
+			preVolumeSmooth += (preVolumeMap - preVolumeSmooth) * volFadeOut;
 		}
-		else if (kinectMovementSpeed <= 0 && prevMovSpd <= 0) {
-			preVolume += (kinectMovementSpeed - preVolume) * volFade;
+		
 
-		}
 
-		prevMovSpd = kinectMovementSpeed; // non inizializzato!!!!!!!!
-
-		smoothVol = pow(preVolume*volScale, 1.f / 10.f) * 1.1;
-
-		volumeFermions = (1 - smoothVol)*audioFermionsVol;
+		volumeFermions = preVolumeSmooth * audioFermionsVol;
 
 		sound.setVolume(volumeFermions);
+
+	
 
 	}
 
@@ -268,47 +322,36 @@ void ofApp::draw() {
 	cam.end();
 	ofDisableDepthTest();
 
+	ofSetColor(0, 255);
+	if (showCrop)
+		ofSetColor(255, 0, 0, 255);
 
+	ofDrawRectangle(-2, 0, cropLeft, 1200);
+
+	ofDrawRectangle(1922, 0, -cropRight, 1200);
+
+	ofSetColor(255, 255);
 
 	if (showGui) {
 
 		ofDrawBitmapString("PRESS G -> TOGGLE GUI \nM -> TOGGLE MOUSE \nF -> TOGGLE FULLSCREEN \nS -> SAVE SETTINGS.XML \nL -> (RE)LOAD SETTINGS.XML", 20, 320);
 		ofDrawBitmapString("FPS " + ofToString(ofGetFrameRate(), 2), 20, 400);
-		ofSetColor(255, 0, 0);
-		ofRect(0, 0, 5, kinectMovementSpeed*0.03);
-		ofSetColor(0, 255, 0);
-		ofRect(5, 0, 5, preVolume*0.03);
-
-		ofNoFill();
-		ofSetColor(0, 255, 255);
-		ofRect(10, 0, 20, 300);
-		ofFill();
-		ofSetColor(0, 255, 255);
-		ofRect(10, 0, 20, volumeFermions * 1000);
-
-		ofSetColor(255);
-		ofDrawBitmapString("<-- audio fermions vol", 20, 280);
-
 
 		gui.draw();
 		if (showgrab) {
 			ofDisableAlphaBlending();
 
 			kinect.getDepthSource()->draw(40, 0, kinectWidth / 2, kinectHeight / 2);
-			fbo.draw(40 + kinectWidth / 2, 0, fbo.getWidth() / 2, fbo.getHeight() / 2);
-			grayImage.draw(40 + kinectWidth, 0, grayImage.getWidth() / 2, grayImage.getHeight() / 2);
-			//kinect.draw(40 + kinectWidth *3 /2, 0, kinectWidth / 2, kinectHeight / 2);
+			fbo.draw(60 + kinectWidth / 2, 0, fbo.getWidth() / 2, fbo.getHeight() / 2);
+			grayImage.draw(80 + kinectWidth, 0, grayImage.getWidth() / 2, grayImage.getHeight() / 2);
+			grayImageKinectDiff.draw(100 + kinectWidth * 3 / 2, 0, kinectWidth / 2, kinectHeight / 2);
 			ofEnableAlphaBlending();
 
-			ofSetColor(0, 200);
-			ofRect(40, 220, 1000, 20);
-			ofSetColor(255);
-			ofDrawBitmapString("INPUT KINECT", 40, kinectHeight / 2 - 5);
-			ofDrawBitmapString("FBO TRAIL", 380, kinectHeight / 2 - 5);
-			ofDrawBitmapString("KINECT CV", 720, grayImage.getHeight() / 2 - 5);
 
-			ofDrawBitmapString("KINECT W " + ofToString(kinectWidth) + "KINECT H " + ofToString(kinectHeight), 500, 20);
-
+			ofDrawBitmapStringHighlight("INPUT KINECT", 40, kinectHeight / 2 + 10);
+			ofDrawBitmapStringHighlight("FBO TRAIL", 380, kinectHeight / 2 + 10);
+			ofDrawBitmapStringHighlight("KINECT CV", 720, grayImage.getHeight() / 2 + 10);
+			ofDrawBitmapStringHighlight("KINECT DIFF AUDIO", 1060, grayImage.getHeight() / 2 + 10);
 		}
 	}
 
@@ -321,6 +364,9 @@ void ofApp::keyPressed(int key) {
 
 	if (key == 'f') {
 		ofToggleFullscreen();
+		if (ofGetWindowMode() != OF_FULLSCREEN) {
+			ofSetWindowPosition(50, 50);
+		}
 	}
 	if (key == 'm') {
 		showmouse = !showmouse;
@@ -331,7 +377,11 @@ void ofApp::keyPressed(int key) {
 		showGui = !showGui;
 	}
 
-
+	if (key == 'x') {
+		screenshot.grabScreen(0, 0, ofGetWidth(), ofGetHeight());
+		screenshot.save("screenshot" + ofToString(screenshotCount) + ".jpg");
+		screenshotCount++;
+	}
 
 	if (key == 's') {
 		gui.saveToFile("settings.xml");

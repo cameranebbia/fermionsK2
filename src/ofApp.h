@@ -42,17 +42,8 @@ public:
 	ofSoundPlayer  background;
 	ofSoundPlayer  sound;
 
-	int kinectMovementSpeed;
-	int prevMovSpd;
 
-	float preVolume = 0;
-	float volScale = 0.00009;
-	float volFade = 0.05;
-
-	float volumeFermions = 0;
-
-
-	float smoothVol;
+	float preVolumeSmooth = 0;
 
 
 	ofxCvGrayscaleImage grayImage; // grayscale depth image
@@ -79,4 +70,28 @@ public:
 	ofParameter<float> extrusion, pointScale, lineAlpha, colR, colB, colG, camPosZ, camPosX, camPosY; //colorExtrusion,
 
 	ofParameter<float> audioBackgroundVol, audioFermionsVol;
+
+	ofParameter<int> cropLeft, cropRight;
+	ofParameter<bool> showCrop;
+
+	ofParameter<float> volFadeIn;
+	ofParameter<float> volFadeOut;
+	ofParameter<int> kinectDiffSkip;
+	int kinectDiffCount;
+	ofParameter<float> kinectMovementSpeed;
+
+
+	ofParameter<int> thresholdAudioOn;
+	ofParameter<int> currPresAmount;
+	ofParameter<int> thresholdMoveAudioMin;
+	ofParameter<int> thresholdMoveAudioMax;
+
+	ofParameter<float> preVolumeMap;
+	ofParameter<float> volumeFermions;
+
+
+	int screenshotCount;
+
+	ofImage screenshot;
+
 };
